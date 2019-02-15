@@ -60,10 +60,14 @@ class Classifier:
             logger.info(text)
 
     def _load_train_data(self) -> None:
-        for line in open(self.data_file, 'r', encoding='utf-8'):
-            txt, label = line.split(';')
-            self.quotes_train_clean.append(preprocess_txt(txt))
-            self.labels.append(int(label))
+        csv_file_path_pattern = f'{self.data_path}/*.csv'
+        csv_files = glob.glob(csv_file_path_pattern)
+        for csv_file in csv_files:
+            with open(csv_file, encoding='utf-8') as cf:
+                for line in cf:
+                    txt, label = line.split(';')
+                    self.quotes_train_clean.append(preprocess_txt(txt))
+                    self.labels.append(int(label))
 
         news_file_path_pattern = f'{self.data_path}/news-*.txt'
         files = glob.glob(news_file_path_pattern)
