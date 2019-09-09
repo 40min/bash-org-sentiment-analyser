@@ -6,8 +6,11 @@ if __name__ == '__main__':
         classifier.show_train_stats()
         classifier.save_model()
 
-    test_labels = []
+    test_labels = [1, 1, 0]
     test_phrases = [
+        "дизайнеры целуются так: CMYK-CMYK!",
+        "Даря ребёнку барабан, вы делите жизнь его родителей на до и после.",
+        "Сегодня разрубил тыкву мачете. День прожит не зря."
     ]
 
     predictions = classifier.check_phrases(test_phrases)

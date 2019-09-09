@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="bash-org-sentiment-analyser",
-    version="0.0.2",
+    version="0.0.3",
     author="Andrew Sorokin",
     author_email="i40mines@yandex.ru",
     description="Attempt to classify quotes from bash.im",
@@ -20,7 +20,8 @@ setuptools.setup(
     ),
     python_requires='>=3',
     install_requires=[
-        'sklearn',
+        'scikit-learn',
+        'nltk',
         'pandas~=0.24.1',
         'pandas~=0.24.1',
     ],

@@ -12,12 +12,12 @@ from sklearn.model_selection import train_test_split
 from nltk.corpus import stopwords
 
 
-DATA_PATH = './data'
-DATA_FILE = 'bash_logs.csv'
+DATA_PATH = './data/rated_bash'
 MODEL_FILE = 'phrase_classifier.pickle'
 VECTORIZER_FILE = 'vectorizer.pk'
 REPLACE_NO_SPACE = re.compile("(\.)|(\;)|(\:)|(\!)|(\')|(\?)|(\,)|(\")|(\()|(\))|(\[)|(\])")
 REPLACE_WITH_SPACE = re.compile("(<br\s*/><br\s*/>)|(\-)|(\/)|(<)|(>)")
+MIN_RATING = 1500
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -28,54 +28,84 @@ stop_words = stop_words + [';)', 'xxx', 'yyy', 'в', 'и', 'с', 'а', ':-)', '�
                            'что', 'да', 'есть', 'теперь', 'вчера', 'тебе', 'он', 'там', 'она', 'всё', 'ещё', 'те']
 
 
-def preprocess_txt(txt):
+def preprocess_txt(txt) -> str:
     txt = REPLACE_NO_SPACE.sub("", txt.lower())
     txt = REPLACE_WITH_SPACE.sub(" ", txt)
     return txt.strip()
+
+
+def parse_csv_line(line: str) -> (str, int):
+    line_splitted = line.split(';')
+    if len(line_splitted) != 2:
+        raise ParseError()
+    txt, label = line_splitted
+    label = label.strip()
+    if not label.isdigit():
+        raise ParseError()
+    label = int(label)
+    txt = preprocess_txt(txt)
+
+    return txt, label
+
+
+class ParseError(Exception):
+    pass
 
 
 class Classifier:
 
     labels = []
     quotes_train_clean = []
+    min_label = 0
+    max_label = 1
     classifier = None
     vectorizer = None
     best_accuracy = None
+    rated_csv_files: {str, } = set()
 
     def __init__(
             self,
             data_path: str,
             stop_words: [str],
-            show_stats: bool = False
+            show_stats: bool = False,
     ) -> None:
         self.data_path = data_path
-        self.data_file = f'{data_path}/{DATA_FILE}'
         self.model_file = f'{data_path}/{MODEL_FILE}'
         self.vectorizer_file = f'{data_path}/{VECTORIZER_FILE}'
         self.show_stats = show_stats
         self.stop_words = stop_words
 
+    def add_rated_csv_file(self, file_name: str):
+        self.rated_csv_files.add(file_name)
+
     def _print(self, text: str) -> None:
         if self.show_stats:
             logger.info(text)
 
-    def _load_train_data(self) -> None:
-        csv_file_path_pattern = f'{self.data_path}/*.csv'
-        csv_files = glob.glob(csv_file_path_pattern)
+    def _load_csv_data(self, csv_files: [], yes_no_file=False):
         for csv_file in csv_files:
             with open(csv_file, encoding='utf-8') as cf:
                 for line in cf:
-                    txt, label = line.split(';')
-                    self.quotes_train_clean.append(preprocess_txt(txt))
-                    self.labels.append(int(label))
+                    try:
+                        txt, label = parse_csv_line(line)
+                    except ParseError:
+                        continue
+                    # if label < MIN_RATING:
+                    #     continue
+                    if yes_no_file:
+                        label = self.max_label if label == 1 else self.min_label
+                    else:
+                        self.min_label = min(self.min_label, label)
+                        self.max_label = max(self.max_label, label)
+                    self.quotes_train_clean.append(txt)
+                    self.labels.append(label)
 
-        news_file_path_pattern = f'{self.data_path}/news-*.txt'
-        files = glob.glob(news_file_path_pattern)
-        for file in files:
-            with open(file, encoding='utf-8') as f:
-                for line in f:
-                    self.quotes_train_clean.append(preprocess_txt(line))
-                    self.labels.append(0)
+    def _load_train_data(self) -> None:
+        csv_file_path_pattern = f'{self.data_path}/*.csv'
+        csv_files = glob.glob(csv_file_path_pattern)
+        self._load_csv_data(csv_files)
+        if self.rated_csv_files:
+            self._load_csv_data(self.rated_csv_files, yes_no_file=True)
 
     def train(self):
         if not self.quotes_train_clean:
