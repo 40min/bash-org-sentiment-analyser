@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="bash-org-sentiment-analyser",
-    version="0.0.4",
+    version="0.0.5",
     author="Andrew Sorokin",
     author_email="i40mines@yandex.ru",
     description="Attempt to classify quotes from bash.im",

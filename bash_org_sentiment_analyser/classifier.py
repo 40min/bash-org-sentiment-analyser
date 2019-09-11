@@ -129,18 +129,31 @@ class Classifier:
         self.classifier = LinearSVC(C=best_step)
         self.classifier.fit(x, self.labels)
 
-    def show_train_stats(self):
+    def cleanup(self):
+        if os.path.isfile(self.model_file):
+            os.remove(self.model_file)
+        if os.path.isfile(self.vectorizer_file):
+            os.remove(self.vectorizer_file)
+        self.quotes_train_clean = []
+        self.labels = []
+
+    def get_train_stats(self) -> str:
         feature_to_coef = {
             word: coef for word, coef in zip(self.vectorizer.get_feature_names(), self.classifier.coef_[0])
         }
-
-        logger.info('Best positive:')
+        result = " Top positive: \n"
         for best_positive in sorted(feature_to_coef.items(), key=lambda x: x[1], reverse=True)[:5]:
-            logger.info(best_positive)
+            result += f"{best_positive[0]}: {best_positive[1]} \n"
 
-        logger.info('Best negative:')
+        result += "\n Top negative \n"
         for best_negative in sorted(feature_to_coef.items(), key=lambda x: x[1])[:5]:
-            logger.info(best_negative)
+            result += f"{best_negative[0]}: {best_negative[1]} \n"
+
+        return result
+
+    def show_train_stats(self):
+        stats = self.get_train_stats()
+        logger.info(stats)
 
     def save_model(self):
         if not self.classifier:
