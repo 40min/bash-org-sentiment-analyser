@@ -17,7 +17,7 @@ MODEL_FILE = 'phrase_classifier.pickle'
 VECTORIZER_FILE = 'vectorizer.pk'
 REPLACE_NO_SPACE = re.compile("(\.)|(\;)|(\:)|(\!)|(\')|(\?)|(\,)|(\")|(\()|(\))|(\[)|(\])")
 REPLACE_WITH_SPACE = re.compile("(<br\s*/><br\s*/>)|(\-)|(\/)|(<)|(>)")
-MIN_RATING = 1500
+MIN_FUN_RATING = 2700
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -25,7 +25,8 @@ logger = logging.getLogger('Classifier')
 stop_words = stopwords.words('russian')
 stop_words = stop_words + [';)', 'xxx', 'yyy', 'в', 'и', 'с', 'а', ':-)', 'на', 'по', 'меня', 'мне', 'то', 'когда',
                            'то', 'сегодня', 'ты', 'вот', 'только', 'это', 'если', 'тут', 'тебя', 'ну', 'так', 'не',
-                           'что', 'да', 'есть', 'теперь', 'вчера', 'тебе', 'он', 'там', 'она', 'всё', 'ещё', 'те']
+                           'что', 'да', 'есть', 'теперь', 'вчера', 'тебе', 'он', 'там', 'она', 'всё', 'ещё', 'те'
+                           'дтп', 'ДТП', 'погиб']
 
 
 def preprocess_txt(txt) -> str:
@@ -56,8 +57,6 @@ class Classifier:
 
     labels = []
     quotes_train_clean = []
-    min_label = 0
-    max_label = 1
     classifier = None
     vectorizer = None
     best_accuracy = None
@@ -90,13 +89,10 @@ class Classifier:
                         txt, label = parse_csv_line(line)
                     except ParseError:
                         continue
-                    # if label < MIN_RATING:
-                    #     continue
-                    if yes_no_file:
-                        label = self.max_label if label == 1 else self.min_label
-                    else:
-                        self.min_label = min(self.min_label, label)
-                        self.max_label = max(self.max_label, label)
+
+                    if not yes_no_file:
+                        label = 1 if label > MIN_FUN_RATING else 0
+
                     self.quotes_train_clean.append(txt)
                     self.labels.append(label)
 
@@ -110,8 +106,9 @@ class Classifier:
     def train(self):
         if not self.quotes_train_clean:
             self._load_train_data()
-        self.vectorizer = CountVectorizer(binary=True, ngram_range=(1, 10), stop_words=stop_words)
+        self.vectorizer = CountVectorizer(binary=True, ngram_range=(3, 10), stop_words=stop_words)
         self.vectorizer.fit(self.quotes_train_clean)
+
         x = self.vectorizer.transform(self.quotes_train_clean)
         x_train, x_val, y_train, y_val = train_test_split(x, self.labels, train_size=0.75)
 
