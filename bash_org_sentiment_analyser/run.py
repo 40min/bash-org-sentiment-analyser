@@ -1,6 +1,13 @@
-from bash_org_sentiment_analyser.classifier import classifier
+import os
+
+from bash_org_sentiment_analyser.classifier import Classifier
 
 if __name__ == '__main__':
+    data_path = os.environ.get('DATA_PATH')
+    if not data_path:
+        raise Exception("Please setup environment var DATA_PATH")
+
+    classifier = Classifier(data_path, show_stats=True)
     if not classifier.load_model():
         classifier.train()
         classifier.show_train_stats()

@@ -12,7 +12,7 @@ from sklearn.model_selection import train_test_split
 from nltk.corpus import stopwords
 
 
-DATA_PATH = './data/rated_bash'
+SUB_PATH = 'rated_bash'
 MODEL_FILE = 'phrase_classifier.pickle'
 VECTORIZER_FILE = 'vectorizer.pk'
 REPLACE_NO_SPACE = re.compile("(\.)|(\;)|(\:)|(\!)|(\')|(\?)|(\,)|(\")|(\()|(\))|(\[)|(\])")
@@ -25,7 +25,7 @@ logger = logging.getLogger('Classifier')
 stop_words = stopwords.words('russian')
 stop_words = stop_words + [';)', 'xxx', 'yyy', 'в', 'и', 'с', 'а', ':-)', 'на', 'по', 'меня', 'мне', 'то', 'когда',
                            'то', 'сегодня', 'ты', 'вот', 'только', 'это', 'если', 'тут', 'тебя', 'ну', 'так', 'не',
-                           'что', 'да', 'есть', 'теперь', 'вчера', 'тебе', 'он', 'там', 'она', 'всё', 'ещё', 'те'
+                           'что', 'да', 'есть', 'теперь', 'вчера', 'тебе', 'он', 'там', 'она', 'всё', 'ещё', 'те',
                            'дтп', 'ДТП', 'погиб']
 
 
@@ -65,14 +65,16 @@ class Classifier:
     def __init__(
             self,
             data_path: str,
-            stop_words: [str],
+            additional_stop_words: [str] = None,
             show_stats: bool = False,
     ) -> None:
-        self.data_path = data_path
+        self.data_path = os.path.join(data_path, SUB_PATH)
         self.model_file = f'{data_path}/{MODEL_FILE}'
         self.vectorizer_file = f'{data_path}/{VECTORIZER_FILE}'
         self.show_stats = show_stats
         self.stop_words = stop_words
+        if additional_stop_words:
+            self.stop_words = self.stop_words + additional_stop_words
 
     def add_rated_csv_file(self, file_name: str):
         self.rated_csv_files.add(file_name)
@@ -98,6 +100,9 @@ class Classifier:
 
     def _load_train_data(self) -> None:
         csv_file_path_pattern = f'{self.data_path}/*.csv'
+        if not os.path.isdir(self.data_path):
+            logger.warning("Data source dir %s in not found", self.data_path)
+            return
         csv_files = glob.glob(csv_file_path_pattern)
         self._load_csv_data(csv_files)
         if self.rated_csv_files:
@@ -106,6 +111,9 @@ class Classifier:
     def train(self):
         if not self.quotes_train_clean:
             self._load_train_data()
+        if not self.quotes_train_clean:
+            logger.warning("No data to train")
+            return
         self.vectorizer = CountVectorizer(binary=True, ngram_range=(3, 10), stop_words=stop_words)
         self.vectorizer.fit(self.quotes_train_clean)
 
@@ -181,6 +189,3 @@ class Classifier:
         x_test = self.vectorizer.transform(phrases_clean)
         predictions = self.classifier.predict(x_test)
         return predictions
-
-
-classifier = Classifier(DATA_PATH, stop_words, show_stats=True)
